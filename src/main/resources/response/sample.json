@@ -1,0 +1,78 @@
+{
+  "results": {
+    "A": {
+      "status": "success",
+      "frames": {
+        "schema": {
+          "refId": "ref123",
+          "meta": {
+            "description": "Sample metadata",
+            "source": "generated"
+          },
+          "fields": [
+            {
+              "name": "App Code",
+              "type": {
+                "dataType": "float",
+                "unit": "Celsius"
+              }
+            },
+            {
+              "name": "Business Date",
+              "type": {
+                "dataType": "integer",
+                "unit": "Percentage"
+              }
+            },
+            {
+              "name": "Job Name",
+              "type": {
+                "dataType": "integer",
+                "unit": "Percentage"
+              }
+            },
+            {
+              "name": "Entity",
+              "type": {
+                "dataType": "integer",
+                "unit": "Percentage"
+              }
+            },
+            {
+              "name": "Start Time",
+              "type": {
+                "dataType": "integer",
+                "unit": "Percentage"
+              }
+            },
+            {
+              "name": "End Time",
+              "type": {
+                "dataType": "integer",
+                "unit": "Percentage"
+              }
+            },
+            {
+              "name": "Successor Dependencies",
+              "type": {
+                "dataType": "integer",
+                "unit": "Percentage"
+              }
+            }
+          ]
+        },
+        "data": {
+          "values": [
+            ["OFP", "OFP"],
+            ["20240115", "20240115"],
+            ["JOB_NAME_1", "JOB_NAME_32"],
+            ["ENTITY_VALUE", "ENTITY_VALUE"],
+            ["20250114T10:00:00Z", "20250114T11:00:00Z"],
+            ["20250114T10:00:05Z", "20250114T11:00:05Z"],
+            ["JOB_NAME_2,JOB_NAME_3", "JOB_NAME_22,JOB_NAME_30"]
+          ]
+        }
+      }
+    }
+  }
+}

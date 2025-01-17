@@ -1,36 +1,74 @@
 package com.dbs.watcherservice.service.impl;
 
+import com.dbs.watcherservice.JsonPrinter;
+import com.dbs.watcherservice.dto.ApiResponse;
+import com.dbs.watcherservice.dto.CpaRawDto;
+import com.dbs.watcherservice.mapper.CpaRawMapper;
+import com.dbs.watcherservice.model.CpaRaw;
+import com.dbs.watcherservice.model.CpaRootNodeConfig;
+import com.dbs.watcherservice.repositories.CpaRawRepository;
+import com.dbs.watcherservice.repositories.CpaRootNodeConfigRepository;
 import com.dbs.watcherservice.service.MonitoringService;
 import jakarta.annotation.PostConstruct;
 import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Profile("Grafana-Service")
 @Service
 public class GrafanaWatcherService implements MonitoringService {
-    private static final String API_URL = "https://api.example.com/endpoint"; // Replace with your API URL
+
+    @Autowired
+    CpaRawRepository cpaRawRepository;
+
+    @Autowired
+    CpaRootNodeConfigRepository cpaRootNodeConfigRepository;
+
+    @Value("${grafana.system}")
+    private static String grafanaProfile;
+
+    @Value("${grafana.system.wait.period}")
+    private static Long waitPeriod;
+
+    @Value("${grafana.system.start.date}")
+    private static Long startDate;
+
+    @Value("${grafana.api.url}")
+    private static String grafanaApiUrl;
 
     private static final OkHttpClient client = new OkHttpClient();
-    private static boolean conditionMet = false;
-    private static int WAIT_PERIOD = 1;
-    private LocalDateTime lastRunTime = LocalDateTime.now().minusDays(7).minusMinutes(WAIT_PERIOD);
+
+    private static final String API_URL = grafanaApiUrl; // Replace with your API URL
+    private static final boolean conditionMet = false;
+    private LocalDateTime lastRunTime = LocalDateTime.now().minusDays(startDate).minusMinutes(waitPeriod);
+    private String targetJobName = "";
 
     @PostConstruct
     public void watchGrafana() {
+        getRootNodeConfig();
         configWatchService();
+    }
+
+    public void getRootNodeConfig() {
+        CpaRootNodeConfig cpaRootNodeConfig = cpaRootNodeConfigRepository.getCpaRootNodeConfigBySystem(grafanaProfile);
+        targetJobName =  cpaRootNodeConfig.getJobName();
     }
 
     @Override
     public void configWatchService() {
+
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         Runnable task = () -> {
 
@@ -59,8 +97,8 @@ public class GrafanaWatcherService implements MonitoringService {
 //                    // Check if the condition is met
 //                    conditionMet = processFile(responseData);
 //                }
-                LocalDateTime startTime = lastRunTime.plusMinutes(WAIT_PERIOD).plusSeconds(1); // Start time for the next range
-                LocalDateTime endTime = startTime.plusMinutes(WAIT_PERIOD); // End time for the next range
+                LocalDateTime startTime = lastRunTime.plusMinutes(waitPeriod).plusSeconds(1); // Start time for the next range
+                LocalDateTime endTime = startTime.plusMinutes(waitPeriod); // End time for the next range
 
                 // Format the times to a string suitable for the API
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
@@ -72,18 +110,70 @@ public class GrafanaWatcherService implements MonitoringService {
 
                 // Update the last run time
                 lastRunTime = startTime;
+
+                ApiResponse res = getApiResponse();
+                processFile(res, scheduler);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         };
         long initialDelay = 0;
-        scheduler.scheduleAtFixedRate(task, initialDelay, WAIT_PERIOD, TimeUnit.MINUTES);
-        // Schedule the task to run every 5 minutes
-//        scheduler.scheduleAtFixedRate(task, 0, 5, TimeUnit.MINUTES);
+        scheduler.scheduleAtFixedRate(task, initialDelay, waitPeriod, TimeUnit.MINUTES);
     }
 
-    public boolean processFile(String responseData) {
-        System.out.println(responseData +"___Asdfasfd");
-        return false;
+    public void processFile(ApiResponse response, ScheduledExecutorService scheduler) {
+        List<CpaRawDto> cpaRawDtos = new ArrayList<>();
+        ApiResponse.Data data = response.getResults().getA().getFrames().getData();
+
+        int size = data.getValues().get(0).size();
+        CpaRawDto cpaRawDto = null;
+        for(int i=0;i< size;i++) {
+            cpaRawDto = new CpaRawDto();
+            cpaRawDto.setAppCode(data.getValues().get(0).get(i));
+            cpaRawDto.setBusinessDate(data.getValues().get(1).get(i));
+            cpaRawDto.setJobName(data.getValues().get(2).get(i));
+            cpaRawDto.setEntity(data.getValues().get(3).get(i));
+            cpaRawDto.setStartTime(data.getValues().get(4).get(i));
+            cpaRawDto.setEndTime(data.getValues().get(5).get(i));
+            cpaRawDto.setDependencies(data.getValues().get(6).get(i));
+
+            cpaRawDtos.add(cpaRawDto);
+
+            if(data.getValues().get(2).get(i).equals(targetJobName)) {
+                saveCpaInformation(cpaRawDtos);
+                generateCPA();
+            }
+        }
+
+        if(!cpaRawDtos.isEmpty()) {
+            saveCpaInformation(cpaRawDtos);
+        }
+
+        System.out.println(cpaRawDtos.size());
+
+    }
+
+    private void saveCpaInformation(List<CpaRawDto> cpaRawDtos) {
+        List<CpaRaw> cpaRaws = CpaRawMapper.INSTANCE.toEntity(cpaRawDtos);
+        cpaRawRepository.saveAll(cpaRaws);
+    }
+
+    private void generateCPA() {
+        System.out.println("CPA generated");
+    }
+
+    private ApiResponse getApiResponse(){
+        ApiResponse response = null;
+        try {
+            ClassPathResource resource = new ClassPathResource("/response/sample.json");
+            ObjectMapper objectMapper = new ObjectMapper();
+             response =  objectMapper.readValue(resource.getInputStream(), ApiResponse.class);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+        assert response != null;
+        JsonPrinter.printJson(response.getResults().getA().getFrames().getData());
+        return response;
+
     }
 }
