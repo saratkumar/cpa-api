@@ -4,22 +4,26 @@ package com.dbs.watcherservice.dto;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Date;
+
 @Getter
 @Setter
 public class CpaRawDto {
 
-    String appCode;
+    private String appCode;
 
-    String jobName;
+    private String jobName;
 
-    String entity;
+    private String entity;
 
-    String startTime;
+    private Date jobStartDateTime;
 
-    String endTime;
+    private Date jobEndDateTime;
 
-    String dependencies;
+    private int duration;
 
-    String businessDate;
+    private String successorDependencies;
+
+    private String businessDate;
 
 }

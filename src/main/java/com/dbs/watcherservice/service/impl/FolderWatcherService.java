@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 @Profile("File-Service")
 @Service
-public class FolderWatcherService implements MonitoringService {
+public class FolderWatcherService implements MonitoringService<Path> {
 
     @Value("${folder.watch.path}")
     private String folderPathConfig;
@@ -69,6 +69,7 @@ public class FolderWatcherService implements MonitoringService {
         logger.info("Monitoring directory: {}", dir);
     }
 
+    @Override
     public void configWatchService() {
         new Thread(() -> {
             while (true) {
@@ -125,7 +126,6 @@ public class FolderWatcherService implements MonitoringService {
         }).start();
     }
 
-
     private void handleFileCreation(Path filePath) {
         if (Files.isRegularFile(filePath)) {
             // Process the file (e.g., read content, etc.)
@@ -137,6 +137,7 @@ public class FolderWatcherService implements MonitoringService {
         }
     }
 
+    @Override
     public void processFile(Path filePath) {
         // Add your file processing logic here
         logger.info("Processing file: {}", filePath);
@@ -149,6 +150,11 @@ public class FolderWatcherService implements MonitoringService {
             logger.error("Error reading file: {}", filePath, e);
         }
 
+
+    }
+
+    @Override
+    public void generateCPA() {
 
     }
 }
