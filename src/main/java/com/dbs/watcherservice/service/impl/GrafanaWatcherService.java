@@ -6,7 +6,9 @@ import com.dbs.watcherservice.model.CpaRaw;
 import com.dbs.watcherservice.model.CpaRootNodeConfig;
 import com.dbs.watcherservice.repositories.CpaRawRepository;
 import com.dbs.watcherservice.repositories.CpaRootNodeConfigRepository;
+import com.dbs.watcherservice.service.GeneratePathService;
 import com.dbs.watcherservice.service.MonitoringService;
+import com.dbs.watcherservice.utils.AppStore;
 import jakarta.annotation.PostConstruct;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,12 @@ public class GrafanaWatcherService implements MonitoringService<ApiResponse> {
     @Autowired
     CpaRootNodeConfigRepository cpaRootNodeConfigRepository;
 
+    @Autowired
+    GeneratePathService generatePathService;
+
+    @Autowired
+    AppStore appStore;
+
     @Value("${grafana.system}")
     private String grafanaProfile;
 
@@ -56,8 +64,9 @@ public class GrafanaWatcherService implements MonitoringService<ApiResponse> {
     private static final boolean conditionMet = false;
     private String targetJobName = "";
     private LocalDateTime lastRunTime = null;
+    private LocalDateTime businessDate = null;
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HH:mm:ssX");
-
+    DateTimeFormatter businessDateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
     @PostConstruct
     public void watchGrafana() {
         getRootNodeConfig();
@@ -75,7 +84,8 @@ public class GrafanaWatcherService implements MonitoringService<ApiResponse> {
         Runnable task = () -> {
             LocalDateTime startTime = lastRunTime.plusSeconds(waitPeriod + 1); // Start time for the next range
             LocalDateTime endTime = startTime.plusMinutes(waitPeriod); // End time for the next range
-
+            businessDate = LocalDateTime.now().minusDays(1); // T-1 business date
+            appStore.setBusinessDate(businessDate.format(businessDateFormatter));
             // Format the times to a string suitable for the API
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
             String startTimeStr = startTime.format(formatter);
@@ -226,13 +236,13 @@ public class GrafanaWatcherService implements MonitoringService<ApiResponse> {
     }
 
     private void saveCpaInformation(List<CpaRaw> cpaRaws) {
-//        cpaRawRepository.saveAll(cpaRaws);
-        System.out.println("COmingHere____+" +cpaRaws.size());
+        cpaRawRepository.saveAll(cpaRaws);
     }
 
     @Override
     public void generateCPA() {
         System.out.println("CPA generated");
+        generatePathService.generateCritictialPath();
     }
 
 
