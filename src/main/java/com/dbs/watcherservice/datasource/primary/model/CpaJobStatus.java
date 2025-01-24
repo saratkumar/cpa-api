@@ -1,4 +1,4 @@
-package com.dbs.watcherservice.model;
+package com.dbs.watcherservice.datasource.primary.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -18,7 +18,7 @@ public class CpaJobStatus {
     @Column(name="system")
     private String appCode;
 
-    private Date businessDate;
+    private String businessDate;
 
     private String status;
 

@@ -1,9 +1,7 @@
 package com.dbs.watcherservice.mapper;
 
 import com.dbs.watcherservice.dto.CpaJobStatusDto;
-import com.dbs.watcherservice.dto.CpaRawDto;
-import com.dbs.watcherservice.model.CpaJobStatus;
-import com.dbs.watcherservice.model.CpaRaw;
+import com.dbs.watcherservice.datasource.primary.model.CpaJobStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

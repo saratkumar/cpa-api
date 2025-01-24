@@ -13,7 +13,7 @@ public class CpaJobStatusDto {
 
     private String appCode;
 
-    private Date businessDate;
+    private String businessDate;
 
     private String status;
 

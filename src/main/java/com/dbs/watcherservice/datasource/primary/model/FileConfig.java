@@ -1,4 +1,4 @@
-package com.dbs.watcherservice.model;
+package com.dbs.watcherservice.datasource.primary.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

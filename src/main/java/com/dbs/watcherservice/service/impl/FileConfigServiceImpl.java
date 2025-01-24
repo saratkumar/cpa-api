@@ -1,8 +1,8 @@
 package com.dbs.watcherservice.service.impl;
 
+import com.dbs.watcherservice.datasource.primary.repositories.FileConfigRepository;
 import com.dbs.watcherservice.dto.FileConfigDto;
-import com.dbs.watcherservice.model.FileConfig;
-import com.dbs.watcherservice.repositories.FileConfigRepository;
+import com.dbs.watcherservice.datasource.primary.model.FileConfig;
 import com.dbs.watcherservice.service.FileConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

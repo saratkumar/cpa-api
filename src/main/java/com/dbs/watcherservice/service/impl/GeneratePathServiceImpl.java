@@ -1,11 +1,11 @@
 package com.dbs.watcherservice.service.impl;
 
 import com.dbs.watcherservice.contants.CpaConfigConstant;
+import com.dbs.watcherservice.datasource.primary.repositories.CpaJobStatusRepository;
+import com.dbs.watcherservice.datasource.primary.repositories.CpaRootNodeConfigRepository;
 import com.dbs.watcherservice.dto.CpaJobStatusDto;
 import com.dbs.watcherservice.mapper.CpaJobStatusMapper;
-import com.dbs.watcherservice.model.CpaJobStatus;
-import com.dbs.watcherservice.repositories.CpaJobStatusRepository;
-import com.dbs.watcherservice.repositories.CpaRootNodeConfigRepository;
+import com.dbs.watcherservice.datasource.primary.model.CpaJobStatus;
 import com.dbs.watcherservice.service.GeneratePathService;
 import com.dbs.watcherservice.utils.AppStore;
 import org.slf4j.Logger;
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class GeneratePathServiceImpl implements GeneratePathService {
-    @Value("${grafana.system}")
+    @Value("${connector.system}")
     private String grafanaProfile;
 
     @Value("${cpa.generator.wait.period}")
@@ -54,8 +54,7 @@ public class GeneratePathServiceImpl implements GeneratePathService {
 
 
     private void generateStandalonePath() {
-        updateCpaJobStatus();
-        //Implmentation logic for triggering library program
+            //Implmentation logic for triggering library program
     }
 
     /**
@@ -97,40 +96,25 @@ public class GeneratePathServiceImpl implements GeneratePathService {
 
     private void getDependencyList(String system) {
         // Check if dependencies are already cached
-        String[] systemDependencies = dependencies.get(system);
+        if(dependencies.get(system) == null) {
+            // Fetch from repository if not cached
+            cpaRootNodeConfigRepository.getCpaRootNodeConfigBySystem(system)
+                    .ifPresentOrElse(config -> {
+                        if(config.getPredecessorSystems() != null) {
+                            // Parse and cache the dependencies
+                            String[] tmp = config.getPredecessorSystems().split(",");
+                            dependencies.put(system, tmp);
 
-        if (systemDependencies != null) {
-            // Recursively process each dependency
-            processDependencies(systemDependencies);
-            return;
+                        }  else {
+                            dependencies.put(system, new String[0]);
+                        }
+                    }, () -> {
+                        // Handle missing configuration
+                        addDependencies(system);
+                        System.out.printf("Unable to find dependencies for system: %s%n", system);
+                    });
         }
 
-        // Fetch from repository if not cached
-        cpaRootNodeConfigRepository.getCpaRootNodeConfigBySystem(system)
-                .ifPresentOrElse(config -> {
-                    if(config.getPredecessorSystems() != null) {
-                        // Parse and cache the dependencies
-                        String[] tmp = config.getPredecessorSystems().split(",");
-                        dependencies.put(system, tmp);
-
-                        // Process dependencies recursively
-                        processDependencies(tmp);
-                    }  else {
-                        dependencies.put(system, new String[0]);
-                    }
-                }, () -> {
-                    // Handle missing configuration
-                    addDependencies(system);
-                    System.out.printf("Unable to find dependencies for system: %s%n", system);
-                });
-    }
-
-    // Helper method to process dependencies recursively
-    private void processDependencies(String[] systemDependencies) {
-        for (String dependency : systemDependencies) {
-
-            getDependencyList(dependency);
-        }
     }
 
     private void addDependencies(String system) {

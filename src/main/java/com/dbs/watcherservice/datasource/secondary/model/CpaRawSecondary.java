@@ -1,9 +1,6 @@
-package com.dbs.watcherservice.model;
+package com.dbs.watcherservice.datasource.secondary.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,7 +10,8 @@ import java.util.Date;
 @Setter
 @Getter
 @Entity
-public class CpaRaw {
+@Table(name = "cpa_raw_con")
+public class CpaRawSecondary {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,6 +32,5 @@ public class CpaRaw {
     private int duration;
 
     private String successorDependencies;
-
 
 }
