@@ -18,6 +18,9 @@ import java.nio.file.WatchService;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Profile("File-Service")
@@ -71,36 +74,41 @@ public class FolderWatcherService implements MonitoringService<Path> {
 
     @Override
     public void configWatchService() {
-        new Thread(() -> {
-            while (true) {
-                WatchKey key;
-                try {
-                    key = watchService.take();  // Blocks until an event is received
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    logger.error("Folder watch service interrupted", e);
-                    break;
-                }
 
-                Path dir = watchKeys.get(key);
-                if (dir == null) {
-                    logger.warn("WatchKey not recognized!");
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+        Runnable task = () -> {
+            WatchKey key = null;
+            try {
+                key = watchService.take();  // Blocks until an event is received
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("Folder watch service interrupted", e);
+                try {
+                    watchService.close();
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+
+            Path dir = watchKeys.get(key);
+            if (dir == null) {
+                logger.warn("WatchKey not recognized!");
+            }
+
+            for (WatchEvent<?> event : key.pollEvents()) {
+                WatchEvent.Kind<?> kind = event.kind();
+
+                if (kind == StandardWatchEventKinds.OVERFLOW) {
                     continue;
                 }
 
-                for (WatchEvent<?> event : key.pollEvents()) {
-                    WatchEvent.Kind<?> kind = event.kind();
+                // Context for directory entry event is the file name
+                WatchEvent<Path> ev = (WatchEvent<Path>) event;
+                Path fileName = ev.context();
+                Path filePath = dir.resolve(fileName);
 
-                    if (kind == StandardWatchEventKinds.OVERFLOW) {
-                        continue;
-                    }
-
-                    // Context for directory entry event is the file name
-                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
-                    Path fileName = ev.context();
-                    Path filePath = dir.resolve(fileName);
-
-                    if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+                if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
 //                        if (Files.isDirectory(filePath)) {
 //                            // Register new subdirectory created inside root folder
 //                            try {
@@ -109,21 +117,27 @@ public class FolderWatcherService implements MonitoringService<Path> {
 //                                logger.error("Error registering new directory: {}", filePath, e);
 //                            }
 //                        }
-                        // Process the newly created file or directory
-                        handleFileCreation(filePath);
-                    }
+                    // Process the newly created file or directory
+                    handleFileCreation(filePath);
                 }
+            }
 
-                boolean valid = key.reset();
-                if (!valid) {
-                    watchKeys.remove(key);
-                    if (watchKeys.isEmpty()) {
-                        logger.warn("All directories are no longer accessible!");
-                        break;
+            boolean valid = key.reset();
+            if (!valid) {
+                watchKeys.remove(key);
+                if (watchKeys.isEmpty()) {
+                    logger.warn("All directories are no longer accessible!");
+                    try {
+                        watchService.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }
             }
-        }).start();
+        };
+
+        // Schedule the task to run after 2 seconds
+        scheduler.schedule(task, 2, TimeUnit.SECONDS);
     }
 
     private void handleFileCreation(Path filePath) {

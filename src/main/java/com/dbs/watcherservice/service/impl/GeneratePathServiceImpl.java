@@ -71,7 +71,7 @@ public class GeneratePathServiceImpl implements GeneratePathService {
                 boolean isDependencySystemsProcessed = true;
                 // Check if any system is processed or not
                 for(var system: dependencies.entrySet()) {
-                    if(cpaJobStatusDtoMap.get(system) == null || CpaConfigConstant.JOB_STATUS.pending.equals(cpaJobStatusDtoMap.get(system))) {
+                    if(cpaJobStatusDtoMap.get(system) == null) {
                         isDependencySystemsProcessed = false;
                         return;
                     }
@@ -81,7 +81,6 @@ public class GeneratePathServiceImpl implements GeneratePathService {
                     logger.warn("Dependency Systems are not processed yet for the business date"+ appStore.getBusinessDate());
                     return;
                 } else {
-
                     //Implmentation logic for triggering library program
                     scheduler.shutdown();
                 }
