@@ -143,7 +143,7 @@ public class FolderWatcherService implements MonitoringService<Path> {
     private void handleFileCreation(Path filePath) {
         if (Files.isRegularFile(filePath)) {
             // Process the file (e.g., read content, etc.)
-            processFile(filePath);
+            processRawInput(filePath);
 
         } else {
             // Process the folder (if needed)
@@ -152,7 +152,7 @@ public class FolderWatcherService implements MonitoringService<Path> {
     }
 
     @Override
-    public void processFile(Path filePath) {
+    public void processRawInput(Path filePath) {
         // Add your file processing logic here
         logger.info("Processing file: {}", filePath);
 
@@ -167,8 +167,4 @@ public class FolderWatcherService implements MonitoringService<Path> {
 
     }
 
-    @Override
-    public void generateCPA() {
-
-    }
 }

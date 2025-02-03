@@ -26,4 +26,6 @@ public class CpaRawDto {
 
     private String businessDate;
 
+    private String updatedAt;
+
 }

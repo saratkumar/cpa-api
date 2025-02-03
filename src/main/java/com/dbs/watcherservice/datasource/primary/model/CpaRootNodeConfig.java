@@ -22,4 +22,10 @@ public class CpaRootNodeConfig {
     private String JobName;
 
     private String predecessorSystems;
+
+    private String remarks;
+
+    private String lastJob;
+
+    private String query;
 }

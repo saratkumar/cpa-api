@@ -1,9 +1,6 @@
 package com.dbs.watcherservice.datasource.primary.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,6 +12,7 @@ import java.util.Date;
 @Getter
 @Entity
 @Builder
+@Table(name="cpa_output")
 public class CpaRaw {
 
     @Id
@@ -37,5 +35,6 @@ public class CpaRaw {
 
     private String successorDependencies;
 
+    private Date updatedAt;
 
 }

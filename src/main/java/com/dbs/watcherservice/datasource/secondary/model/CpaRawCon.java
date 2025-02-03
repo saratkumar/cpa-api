@@ -10,8 +10,7 @@ import java.util.Date;
 @Setter
 @Getter
 @Entity
-@Table(name = "cpa_raw_con")
-public class CpaRawSecondary {
+public class CpaRawCon {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -7,8 +7,8 @@ public interface MonitoringService<T>   {
 
     void configWatchService();
 
-    void generateCPA();
+//    void generateCPA();
 
-    void processFile(T input);
+    void processRawInput(T input);
 
 }

@@ -1,6 +1,6 @@
 package com.dbs.watcherservice.mapper;
 
-import com.dbs.watcherservice.datasource.secondary.model.CpaRawSecondary;
+import com.dbs.watcherservice.datasource.secondary.model.CpaRawCon;
 import com.dbs.watcherservice.dto.CpaRawDto;
 import com.dbs.watcherservice.datasource.primary.model.CpaRaw;
 import org.mapstruct.Mapper;
@@ -22,5 +22,5 @@ public interface CpaRawMapper {
     List<CpaRawDto> toDTO(List<CpaRaw> cpaRaw);
 
 
-    List<CpaRaw> toCpaRawEntity(List<CpaRawSecondary> cpaRawSecondaries);
+    List<CpaRaw> toCpaRawEntity(List<CpaRawCon> cpaRawSecondaries);
 }
