@@ -5,6 +5,7 @@ import com.dbs.watcherservice.datasource.primary.model.CpaRootNodeConfig;
 import com.dbs.watcherservice.datasource.primary.repositories.CpaRawRepository;
 import com.dbs.watcherservice.datasource.primary.repositories.CpaRootNodeConfigRepository;
 import com.dbs.watcherservice.service.GeneratePathService;
+import com.dbs.watcherservice.utils.AppStore;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,10 +26,14 @@ public abstract class ProcessPayload {
     @Autowired
     GeneratePathService generatePathService;
 
+    @Autowired
+    AppStore appStore;
+
     @Value("${connector.system}")
     private String grafanaProfile;
 
     private String targetJobName = "";
+
     CpaRootNodeConfig cpaRootNodeConfig = null;
 
     @PostConstruct
@@ -46,21 +51,18 @@ public abstract class ProcessPayload {
                 e.getJobName().equals(targetJobName)).findFirst();
 
 
-        cpaRaw.ifPresent(e -> generateCPA());
+        cpaRaw.ifPresent(e -> {
+            System.out.println("CPA generate process started");
+            appStore.setEntity(e.getEntity());
+            generatePathService.generateCritictialPath();
+        });
     }
 
 
     public CpaRootNodeConfig getRootNodeConfig() {
-        Optional<CpaRootNodeConfig> cpaRootNodeConfig = cpaRootNodeConfigRepository.getCpaRootNodeConfigBySystem(grafanaProfile);
+        Optional<CpaRootNodeConfig> cpaRootNodeConfig = cpaRootNodeConfigRepository.findBySystem(grafanaProfile);
         cpaRootNodeConfig.ifPresent(rootNodeConfig -> targetJobName = rootNodeConfig.getJobName());
         return cpaRootNodeConfig.get();
     }
-
-
-    public void generateCPA() {
-        System.out.println("CPA generate process started");
-        generatePathService.generateCritictialPath();
-    }
-
 
 }

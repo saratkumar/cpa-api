@@ -14,13 +14,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -46,10 +45,6 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
     @Value("${grafana.system.wait.period}")
     private int waitPeriod;
 
-//    @Value("${grafana.system.start.date}")
-//    private Long startDate;
-
-
     private LocalDateTime lastRunTime = null;
     private LocalDateTime businessDate = null;
     DateTimeFormatter businessDateFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -72,6 +67,8 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
                 appStore.setBusinessDate(businessDate.format(businessDateFormatter));
 
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                LocalDateTime startDate = startTime.truncatedTo(ChronoUnit.SECONDS);
+                LocalDateTime endDate = endTime.truncatedTo(ChronoUnit.SECONDS);
 //                List<CpaRawSecondary> cpaRawSecondaries = cpaRawConnectorRepository.findByBusinessDateAndEntityAndAppCodeAndJobStartDateTimeGreaterThanEqualAndJobEndDateTimeLessThanEqual(
 //                        appStore.getBusinessDate(),
 //                        entity,
@@ -84,8 +81,8 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
                     query.setParameter("businessDate", appStore.getBusinessDate());
                     query.setParameter("entity", entity);
                     query.setParameter("appCode", grafanaProfile);
-                    query.setParameter("jobStartDateTime", Timestamp.valueOf(startTime.format(formatter)));
-                    query.setParameter("jobEndDateTime", Timestamp.valueOf(endTime.format(formatter)));
+                    query.setParameter("jobStartDateTime", startTime);
+                    query.setParameter("jobEndDateTime", endTime);
                     List<CpaRawCon> cpaRawSecondaries = query.getResultList();
 
                     // Update the last run time
@@ -111,6 +108,8 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
 
     }
 
-
-
+    public static String formatLocalDateTime(LocalDateTime dateTime) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return dateTime.format(formatter);  // Return the formatted string
+    }
 }

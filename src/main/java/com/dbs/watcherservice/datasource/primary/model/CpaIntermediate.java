@@ -1,39 +1,26 @@
 package com.dbs.watcherservice.datasource.primary.model;
 
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Date;
-
-
-@Setter
 @Getter
+@Setter
 @Entity
-@Builder
-public class CpaRaw {
+public class CpaIntermediate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private long id;
 
+    @Column(name="system")
     private String appCode;
 
     private String businessDate;
 
     private String jobName;
 
-    private String entity;
-
-    private Date jobStartDateTime;
-
-    private Date jobEndDateTime;
+    private String predecessorJob;
 
     private int duration;
-
-    private String successorDependencies;
-
-    private Date updatedAt;
-
 }

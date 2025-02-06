@@ -7,6 +7,6 @@ import java.util.Optional;
 
 public interface CpaRootNodeConfigRepository extends JpaRepository<CpaRootNodeConfig, Long> {
 
-    public Optional<CpaRootNodeConfig> getCpaRootNodeConfigBySystem(String system);
+    public Optional<CpaRootNodeConfig> findBySystem(String system);
 
 }

@@ -11,4 +11,6 @@ public class AppStore {
 
     private String businessDate;
 
+    private String entity;
+
 }
