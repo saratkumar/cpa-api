@@ -1,6 +1,7 @@
 package com.dbs.watcherservice.service.impl;
 import com.dbs.watcherservice.contants.CpaConfigConstant;
 import com.dbs.watcherservice.datasource.primary.model.CpaRootNodeConfig;
+import com.dbs.watcherservice.datasource.primary.model.CriticalPathAnalysisOutputData;
 import com.dbs.watcherservice.datasource.primary.repositories.CpaJobStatusRepository;
 import com.dbs.watcherservice.datasource.primary.repositories.CpaRootNodeConfigRepository;
 import com.dbs.watcherservice.dto.CpaGeneratorRequest;
@@ -72,16 +73,15 @@ public class GeneratePathServiceImpl implements GeneratePathService {
     }
 
 
-    private void prepareCPAApiRequest(Boolean isStandalone) throws JsonProcessingException{
+    private List<CriticalPathAnalysisOutputData> prepareCPAApiRequest(Boolean isStandalone) throws JsonProcessingException {
         //Implmentation logic for triggering library program
         Optional<CpaRootNodeConfig> cpaRootNodeConfig = cpaRootNodeConfigRepository.findBySystem(grafanaProfile);
         if(cpaRootNodeConfig.isPresent()) {
             CpaGeneratorRequest cpaGeneratorRequest = new CpaGeneratorRequest();
-            cpaGeneratorRequest.setSystem(grafanaProfile);
+            cpaGeneratorRequest.setSystem(isStandalone ? grafanaProfile : grafanaProfile +"-all");
             cpaGeneratorRequest.setBusinessDate(appStore.getBusinessDate());
-            cpaGeneratorRequest.setJobName(isStandalone ? cpaRootNodeConfig.get().getJobName() : (cpaRootNodeConfig.get().getJobName() +"-all"));
+            cpaGeneratorRequest.setJobName(cpaRootNodeConfig.get().getLastJob());
             cpaGeneratorRequest.setEntity(appStore.getEntity());
-            cpaGeneratorRequest.setIsDefault(true);
             String jsonRequest = objectMapper.writeValueAsString(cpaGeneratorRequest);
             RequestBody body = RequestBody.create(jsonRequest, CpaConfigConstant.JSON);
             Request postRequest = new Request.Builder()
@@ -89,7 +89,7 @@ public class GeneratePathServiceImpl implements GeneratePathService {
                     .post(body)
                     .header("Content-Type", "application/json")
                     .build();
-            try(Response response = client.newCall(postRequest).execute()) {
+             try(Response response = client.newCall(postRequest).execute()) {
                 if (response.isSuccessful()) {
                     System.out.println("Response: " + response.body().string());
                 } else {
@@ -101,7 +101,7 @@ public class GeneratePathServiceImpl implements GeneratePathService {
             }
         }
 
-
+        return null;
 
     }
 
@@ -110,30 +110,14 @@ public class GeneratePathServiceImpl implements GeneratePathService {
      * Need to wait until all the dependencies are avaialble
      **/
     private void generateWithDependencies() {
-        LocalDateTime lastRunTime = LocalDateTime.now();
-        getDependencyList(grafanaProfile);
-
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         Runnable task = () -> {
             try {
-                Map<String, CpaJobStatusDto> cpaJobStatusDtoMap = getDependencySystemJobStatus();
-                boolean isDependencySystemsProcessed = true;
-                // Check if any system is processed or not
-                for (var system : dependencies.entrySet()) {
-                    if (cpaJobStatusDtoMap.get(system) == null) {
-                        isDependencySystemsProcessed = false;
-                        return;
-                    }
+                List<CriticalPathAnalysisOutputData> criticalPathAnalysisOutputData =  prepareCPAApiRequest(false);
+                if(criticalPathAnalysisOutputData != null && !criticalPathAnalysisOutputData.isEmpty()) {
+                    scheduler.shutdown();
                 }
 
-                if (!isDependencySystemsProcessed) {
-                    logger.warn("Dependency Systems are not processed yet for the business date" + appStore.getBusinessDate());
-                    return;
-                } else {
-                    //Implmentation logic for triggering library program
-                    scheduler.shutdown();
-                    prepareCPAApiRequest(false);
-                }
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -143,47 +127,4 @@ public class GeneratePathServiceImpl implements GeneratePathService {
 
     }
 
-    private void getDependencyList(String system) {
-        // Check if dependencies are already cached
-        if (dependencies.get(system) == null) {
-            // Fetch from repository if not cached
-            cpaRootNodeConfigRepository.findBySystem(system)
-                    .ifPresentOrElse(config -> {
-                        if (config.getPredecessorSystems() != null) {
-                            // Parse and cache the dependencies
-                            String[] tmp = config.getPredecessorSystems().split(",");
-                            dependencies.put(system, tmp);
-
-                        } else {
-                            dependencies.put(system, new String[0]);
-                        }
-                    }, () -> {
-                        // Handle missing configuration
-                        addDependencies(system);
-                        System.out.printf("Unable to find dependencies for system: %s%n", system);
-                    });
-        }
-
-    }
-
-    private void addDependencies(String system) {
-        dependencies.put(system, new String[0]);
-    }
-
-    private Map<String, CpaJobStatusDto> getDependencySystemJobStatus() {
-        List<CpaJobStatus> cpaJobStatusList = cpaJobStatusRepository.findByBusinessDate(appStore.getBusinessDate());
-
-        return cpaJobStatusList.stream()
-                .collect(Collectors.toMap(
-                        CpaJobStatus::getAppCode, // Extracts the key using a getter method
-                        e -> CpaJobStatusMapper.INSTANCE.toDTO(e) // Maps each element to a DTO
-                ));
-    }
 }
-
-
-/***
- *
- * who will updat the job status on the table
- *
- */
