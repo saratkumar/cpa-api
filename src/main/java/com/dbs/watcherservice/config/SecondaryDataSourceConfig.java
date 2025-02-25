@@ -1,9 +1,9 @@
 package com.dbs.watcherservice.config;
 
 import jakarta.persistence.EntityManagerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +14,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 @EnableTransactionManagement
@@ -23,11 +25,30 @@ import javax.sql.DataSource;
     transactionManagerRef = "secondaryTransactionManager"
 )
 public class SecondaryDataSourceConfig {
+    @Autowired
+    private SecondaryDataSourceProperties secondaryDataSourceProperties;
 
     @Bean(name = "secondaryDataSource")
-    @ConfigurationProperties(prefix = "spring.datasource.secondary")
-    public DataSource dataSource() {
-        return DataSourceBuilder.create().build();
+    public DataSource secondaryDataSource() {
+        DynamicRoutingDataSource dynamicRoutingDataSource = new DynamicRoutingDataSource();
+        Map<Object, Object> dataSourceMap = new HashMap<>();
+
+        //Load dynamic data from properties
+        for(Map.Entry<String, SecondaryDataSourceProperties.DataSourceConfig> entry: secondaryDataSourceProperties.getDatasources().entrySet()) {
+            SecondaryDataSourceProperties.DataSourceConfig config = entry.getValue();
+
+            DataSource dataSource = DataSourceBuilder.create()
+                    .url(config.getUrl())
+                    .username(config.getUsername())
+                    .password(config.getPassword())
+                    .driverClassName(config.getDriverClassName())
+                    .build();
+            dataSourceMap.put(entry.getKey(), dataSource);
+        }
+        dynamicRoutingDataSource.setTargetDataSources(dataSourceMap);
+        dynamicRoutingDataSource.setDefaultTargetDataSource(dataSourceMap.get("DL")); //defaul value
+
+        return dynamicRoutingDataSource;
     }
 
     @Bean(name = "secondaryEntityManagerFactory")

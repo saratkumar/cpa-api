@@ -4,6 +4,7 @@ import com.dbs.watcherservice.datasource.secondary.repositories.CpaRawConnectorR
 import com.dbs.watcherservice.datasource.primary.model.CpaRaw;
 import com.dbs.watcherservice.datasource.secondary.model.CpaRawCon;
 import com.dbs.watcherservice.mapper.CpaRawMapper;
+import com.dbs.watcherservice.service.DataSourceService;
 import com.dbs.watcherservice.service.MonitoringService;
 import com.dbs.watcherservice.utils.AppStore;
 import jakarta.annotation.PostConstruct;
@@ -35,6 +36,9 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
 
     @PersistenceContext(unitName = "secondary")
     EntityManager entityManager;
+
+    @Autowired
+    DataSourceService dataSourceService;
 
     @Value("${connector.system}")
     private String grafanaProfile;
@@ -76,6 +80,7 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
 //                        startTime,
 //                        endTime
 //                );
+                dataSourceService.switchToDataSource(grafanaProfile);
                 if(cpaRootNodeConfig != null) {
                     Query query = entityManager.createQuery(cpaRootNodeConfig.getQuery(), CpaRawCon.class);
                     query.setParameter("businessDate", appStore.getBusinessDate());
@@ -92,6 +97,8 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
             } catch (Exception e) {
                 logger.error("Grafana Service_"+e.getMessage());
                 e.printStackTrace();
+            } finally {
+                dataSourceService.clearDataSource();
             }
         };
         long initialDelay = 0;
@@ -105,6 +112,8 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
         List<CpaRaw> cpaRaws = CpaRawMapper.INSTANCE.toCpaRawEntity(response);
 
         findAndTriggerCPA(cpaRaws);
+
+        findETA(cpaRaws);
 
     }
 
