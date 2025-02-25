@@ -44,7 +44,7 @@ public abstract class ProcessPayload {
     AppStore appStore;
 
     @Value("${connector.system}")
-    private String grafanaProfile;
+    private String system;
 
     private String targetJobName = "";
 
@@ -59,7 +59,7 @@ public abstract class ProcessPayload {
 
     public void findAndTriggerCPA(List<CpaRaw> cpaRaws) {
 
-//        cpaRawRepository.saveAll(cpaRaws);
+        cpaRawRepository.saveAll(cpaRaws);
 
         Optional<CpaRaw> cpaRaw = cpaRaws.stream().filter(e ->
                 e.getJobName().equals(targetJobName)).findFirst();
@@ -74,8 +74,8 @@ public abstract class ProcessPayload {
 
 
     public CpaRootNodeConfig getRootNodeConfig() {
-        Optional<CpaRootNodeConfig> cpaRootNodeConfig = cpaRootNodeConfigRepository.findBySystem(grafanaProfile);
-        cpaRootNodeConfig.ifPresent(rootNodeConfig -> targetJobName = rootNodeConfig.getJobName());
+        Optional<CpaRootNodeConfig> cpaRootNodeConfig = cpaRootNodeConfigRepository.findBySystem(system);
+        cpaRootNodeConfig.ifPresent(rootNodeConfig -> targetJobName = rootNodeConfig.getLastJob());
         return cpaRootNodeConfig.get();
     }
 
