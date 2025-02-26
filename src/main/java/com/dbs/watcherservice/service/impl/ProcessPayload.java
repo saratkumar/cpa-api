@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,11 +49,12 @@ public abstract class ProcessPayload {
 
     private String targetJobName = "";
 
-    CpaRootNodeConfig cpaRootNodeConfig = null;
+
+    List<CpaRootNodeConfig> cpaRootNodeConfigs = new ArrayList<>();
 
     @PostConstruct
     public void init() {
-        cpaRootNodeConfig = getRootNodeConfig();
+        cpaRootNodeConfigs = getRootNodeConfigs();
     }
 
 
@@ -73,10 +75,10 @@ public abstract class ProcessPayload {
     }
 
 
-    public CpaRootNodeConfig getRootNodeConfig() {
-        Optional<CpaRootNodeConfig> cpaRootNodeConfig = cpaRootNodeConfigRepository.findBySystem(system);
-        cpaRootNodeConfig.ifPresent(rootNodeConfig -> targetJobName = rootNodeConfig.getLastJob());
-        return cpaRootNodeConfig.get();
+    public List<CpaRootNodeConfig> getRootNodeConfigs() {
+        cpaRootNodeConfigs = cpaRootNodeConfigRepository.findAll();
+        appStore.setCpaRootNodeConfigList(cpaRootNodeConfigs);
+        return cpaRootNodeConfigs;
     }
 
 

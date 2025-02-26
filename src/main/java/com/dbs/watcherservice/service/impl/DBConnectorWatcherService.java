@@ -1,6 +1,7 @@
 package com.dbs.watcherservice.service.impl;
 
 import com.dbs.watcherservice.datasource.primary.model.CpaRaw;
+import com.dbs.watcherservice.datasource.primary.model.CpaRootNodeConfig;
 import com.dbs.watcherservice.datasource.secondary.repositories.CpaRawConnectorRepository;
 import com.dbs.watcherservice.service.DataSourceService;
 import com.dbs.watcherservice.service.MonitoringService;
@@ -60,43 +61,46 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
 
     @Override
     public void configWatchService() {
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        lastRunTime = LocalDateTime.now();
-        Runnable task = () -> {
-            try {
-                LocalDateTime startTime = lastRunTime; // Start time for the next range
-                LocalDateTime endTime = startTime.plusMinutes(waitPeriod); // End time for the next range
-                businessDate = LocalDateTime.now().minusDays(1); // T-1 business date
-                //appStore.setBusinessDate(businessDate.format(businessDateFormatter));
-                appStore.setBusinessDate("20250131");
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        for(CpaRootNodeConfig cpaRootNodeConfig : cpaRootNodeConfigs) {
+            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+            lastRunTime = LocalDateTime.now();
+            Runnable task = () -> {
+                try {
+                    LocalDateTime startTime = lastRunTime; // Start time for the next range
+                    LocalDateTime endTime = startTime.plusMinutes(waitPeriod); // End time for the next range
+                    businessDate = LocalDateTime.now().minusDays(1); // T-1 business date
+                    //appStore.setBusinessDate(businessDate.format(businessDateFormatter));
+                    appStore.setBusinessDate("20250131");
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 //                LocalDateTime startDate = startTime.truncatedTo(ChronoUnit.SECONDS);
 //                LocalDateTime endDate = endTime.truncatedTo(ChronoUnit.SECONDS);
-                LocalDateTime startDate = startTime.minusDays(20).truncatedTo(ChronoUnit.SECONDS); // testing purpose
-                LocalDateTime endDate = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);// testing purpose
-                dataSourceService.switchToDataSource(grafanaProfile);
-                if(cpaRootNodeConfig != null) {
-                    Query query = entityManager.createNativeQuery(cpaRootNodeConfig.getQuery());
+                    LocalDateTime startDate = startTime.minusDays(20).truncatedTo(ChronoUnit.SECONDS); // testing purpose
+                    LocalDateTime endDate = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);// testing purpose
+                    dataSourceService.switchToDataSource(cpaRootNodeConfig.getSystem());
+                    if(cpaRootNodeConfig != null) {
+                        Query query = entityManager.createNativeQuery(cpaRootNodeConfig.getQuery());
 //                    query.setParameter("businessDate", appStore.getBusinessDate());
-                    query.setParameter("businessDate", "20250131"); // testing purpose
-                    query.setParameter("entity", entity);
-                    query.setParameter("jobStartDateTime", startDate);
-                    query.setParameter("jobEndDateTime", endDate);
-                    List<Object[]> cpaRawSecondaries = query.getResultList();
+                        query.setParameter("businessDate", "20250131"); // testing purpose
+                        query.setParameter("entity", entity);
+                        query.setParameter("jobStartDateTime", startDate);
+                        query.setParameter("jobEndDateTime", endDate);
+                        List<Object[]> cpaRawSecondaries = query.getResultList();
 
-                    // Update the last run time
-                    lastRunTime = endTime.plusSeconds(1);
-                    processRawInput(cpaRawSecondaries);
+                        // Update the last run time
+                        lastRunTime = endTime.plusSeconds(1);
+                        processRawInput(cpaRawSecondaries);
+                    }
+                } catch (Exception e) {
+                    logger.error("DB Connector Service_"+e.getMessage());
+                    e.printStackTrace();
+                } finally {
+                    dataSourceService.clearDataSource();
                 }
-            } catch (Exception e) {
-                logger.error("DB Connector Service_"+e.getMessage());
-                e.printStackTrace();
-            } finally {
-                dataSourceService.clearDataSource();
-            }
-        };
-        long initialDelay = 0;
-        scheduler.scheduleAtFixedRate(task, initialDelay, waitPeriod, TimeUnit.MINUTES);
+            };
+            long initialDelay = 0;
+            scheduler.scheduleAtFixedRate(task, initialDelay, waitPeriod, TimeUnit.MINUTES);
+        }
+
 
     }
 
