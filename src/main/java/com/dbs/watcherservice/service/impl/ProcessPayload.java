@@ -84,14 +84,22 @@ public abstract class ProcessPayload {
         ExecutorService executor = Executors.newFixedThreadPool(1);
         executor.submit( () -> {
             try {
-                List<JobDelay> jobDelays = cpaEtaRepository.getJobDelays(appStore.getBusinessDate(), appStore.getEntity(), grafanaProfile);
+                List<JobDelay> jobDelays = cpaEtaRepository.getJobDelays(appStore.getBusinessDate(), appStore.getEntity(), system);
                 /**Implementation*/
                 if(jobDelays.size() > 0) {
                     JobDelay jobDelay = jobDelays.get(0);
 
-                    if(jobDelay.getTotalDelay() != null || jobDelay.getTotalDelaySeconds() > 0) {
+                    if(jobDelay.getEndDelay() != null) {
+                        long sqlTimeInMillis = jobDelay.getEndDelay().getTime();
+                        Duration timeDelayDuration = Duration.ofMillis(sqlTimeInMillis);
 
-                        /*** add the total value to exiting value **/
+                        // Already available system time
+                        Duration additionalDuration = Duration.ZERO;
+
+                        // Add the durations
+                        Duration totalDuration = additionalDuration.plus(timeDelayDuration);
+
+                        /*** update the totalDuration to the column **/
                     }
                 }
             } catch (Exception e) {

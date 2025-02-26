@@ -5,6 +5,8 @@ import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.sql.Time;
+
 @Getter
 @Setter
 @Entity
@@ -13,7 +15,7 @@ public class JobDelay {
     @Id
     private String system;
 
-    private long totalDelaySeconds;
-    private String totalDelay;
+    private Time startDelay;
+    private Time endDelay;
 
 }
