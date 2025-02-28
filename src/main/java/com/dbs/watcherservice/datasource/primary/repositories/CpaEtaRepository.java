@@ -12,15 +12,6 @@ import java.util.List;
 @Repository
 public interface CpaEtaRepository extends JpaRepository<CpaEta, Long>{
 
-    @Query("SELECT e FROM CpaEta e " +
-            "WHERE e.id IN ( " +
-            "   (SELECT MIN(e2.id) FROM CpaEta e2 WHERE e2.appCode = :appCode AND e2.businessDate = :businessDate AND e2.entity = :entity), " +
-            "   (SELECT MAX(e2.id) FROM CpaEta e2 WHERE e2.appCode = :appCode AND e2.businessDate = :businessDate AND e2.entity = :entity) " +
-            ")")
-    List<CpaEta> findFirstAndLastRecords(@Param("appCode") String appCode,
-                                         @Param("businessDate") String businessDate,
-                                         @Param("entity") String entity);
-
 
     @Query(value = "WITH ordered_jobs AS (\n" +
             "    SELECT \n" +
@@ -102,5 +93,8 @@ public interface CpaEtaRepository extends JpaRepository<CpaEta, Long>{
             "    TIMEDIFF(actual_end_time, eta_end_time) AS end_delay\n" +
             "FROM propagated_jobs ORDER BY `system`, eta_start_time DESC LIMIT 1;", nativeQuery = true)
     List<CpaEta> getJobDelays(String businessDate, String entity, String appCode);
+
+
+    List<CpaEta> findByBusinessDateAndEntityAndAppCode(String businessDate, String entity, String appCode);
 
 }

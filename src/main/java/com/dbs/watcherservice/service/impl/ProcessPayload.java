@@ -13,10 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
@@ -82,7 +79,7 @@ public abstract class ProcessPayload {
     }
 
 
-    public void findETA(List<CpaRaw> cpaRaws) {
+    public void findETA(List<CpaRaw> cpaRaws, String system) {
         ExecutorService executor = Executors.newFixedThreadPool(1);
         executor.submit( () -> {
             try {
@@ -91,7 +88,21 @@ public abstract class ProcessPayload {
                  * more relevant keeping it on cpaeta repo
                  */
                 List<CpaEta> cpaEtaConfigs = cpaEtaRepository.getJobDelays(appStore.getBusinessDate(), appStore.getEntity(), system);
-                cpaEtaConfigs.forEach(e -> e.setBusinessDate(appStore.getBusinessDate()));
+                List<CpaEta> exitingCpaEtaConfigs = cpaEtaRepository.findByBusinessDateAndEntityAndAppCode(appStore.getBusinessDate(), appStore.getEntity(), system);
+                Map<String, CpaEta> cpaEtaMap = exitingCpaEtaConfigs.stream().collect(Collectors.toMap(e -> e.getJobName(), Function.identity()));
+                /**
+                 * check job is already present in cpa_eta table if yes then update the time, and cpa raw value
+                 */
+                cpaEtaConfigs.forEach(e -> {
+                    CpaEta previousVal = cpaEtaMap.get(e.getJobName());
+                    if(previousVal != null) {
+                        e.setId(previousVal.getId());
+                        e.setCpaRaw(previousVal.getCpaRaw());
+                    } else {
+                        e.setBusinessDate(appStore.getBusinessDate());
+                    }
+                });
+
                 /**Implementation*/
                 cpaEtaRepository.saveAll(cpaEtaConfigs);
             } catch (Exception e) {

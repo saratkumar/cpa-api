@@ -106,7 +106,7 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
 
     @Override
     public void processRawInput(List<Object[]> response) {
-
+        String system = (String) response.get(0)[0];
         List<CpaRaw> cpaRaws = new ArrayList<>(response.size());
         for(Object[] res: response) {
             CpaRaw cpaRaw = new CpaRaw();
@@ -126,6 +126,6 @@ public class DBConnectorWatcherService extends ProcessPayload implements Monitor
 
         findAndTriggerCPA(cpaRaws);
 
-        findETA(cpaRaws);
+        findETA(cpaRaws, system);
     }
 }
