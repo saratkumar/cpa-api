@@ -86,24 +86,14 @@ public abstract class ProcessPayload {
         ExecutorService executor = Executors.newFixedThreadPool(1);
         executor.submit( () -> {
             try {
-                List<JobDelay> jobDelays = cpaEtaRepository.getJobDelays(appStore.getBusinessDate(), appStore.getEntity(), system);
+                /**
+                 * Fetch records from cpa_eta_configs and cpa_raw tables and calculate the differences. to make it
+                 * more relevant keeping it on cpaeta repo
+                 */
+                List<CpaEta> cpaEtaConfigs = cpaEtaRepository.getJobDelays(appStore.getBusinessDate(), appStore.getEntity(), system);
+                cpaEtaConfigs.forEach(e -> e.setBusinessDate(appStore.getBusinessDate()));
                 /**Implementation*/
-                if(jobDelays.size() > 0) {
-                    JobDelay jobDelay = jobDelays.get(0);
-
-                    if(jobDelay.getEndDelay() != null) {
-                        long sqlTimeInMillis = jobDelay.getEndDelay().getTime();
-                        Duration timeDelayDuration = Duration.ofMillis(sqlTimeInMillis);
-
-                        // Already available system time
-                        Duration additionalDuration = Duration.ZERO;
-
-                        // Add the durations
-                        Duration totalDuration = additionalDuration.plus(timeDelayDuration);
-
-                        /*** update the totalDuration to the column **/
-                    }
-                }
+                cpaEtaRepository.saveAll(cpaEtaConfigs);
             } catch (Exception e) {
                 executor.shutdown();
                 System.out.println("Exception in finding ETA "+ e.getMessage());

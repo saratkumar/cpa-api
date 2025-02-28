@@ -1,15 +1,26 @@
 package com.dbs.watcherservice.datasource.primary.repositories;
 
 import com.dbs.watcherservice.datasource.primary.model.CpaEta;
-import com.dbs.watcherservice.datasource.primary.model.JobDelay;
+import com.dbs.watcherservice.datasource.primary.model.CpaEtaConfig;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
-public interface CpaEtaRepository extends JpaRepository<JobDelay, Long >{
+public interface CpaEtaRepository extends JpaRepository<CpaEta, Long>{
+
+    @Query("SELECT e FROM CpaEta e " +
+            "WHERE e.id IN ( " +
+            "   (SELECT MIN(e2.id) FROM CpaEta e2 WHERE e2.appCode = :appCode AND e2.businessDate = :businessDate AND e2.entity = :entity), " +
+            "   (SELECT MAX(e2.id) FROM CpaEta e2 WHERE e2.appCode = :appCode AND e2.businessDate = :businessDate AND e2.entity = :entity) " +
+            ")")
+    List<CpaEta> findFirstAndLastRecords(@Param("appCode") String appCode,
+                                         @Param("businessDate") String businessDate,
+                                         @Param("entity") String entity);
+
 
     @Query(value = "WITH ordered_jobs AS (\n" +
             "    SELECT \n" +
@@ -18,6 +29,8 @@ public interface CpaEtaRepository extends JpaRepository<JobDelay, Long >{
             "        ce.entity,\n" +
             "        ce.startTime AS eta_start_time,\n" +
             "        ce.endTime AS eta_end_time,\n" +
+            "        ce.id AS eta_config_id,\n" +
+            "        cr.id AS cpa_raw_id,\n" +
             "        \n" +
             "        -- Use raw data if available; otherwise, take reference table values\n" +
             "        COALESCE(TIME(cr.job_start_date_time), ce.startTime) AS raw_start_time,\n" +
@@ -36,6 +49,7 @@ public interface CpaEtaRepository extends JpaRepository<JobDelay, Long >{
             "        AND ce.system = cr.app_code \n" +
             "        AND ce.entity = cr.entity\n" +
             "        AND cr.business_date = :businessDate -- Filter for specific business date\n" +
+            "        WHERE cr.job_name IS NOT NULL AND entity=:entity AND system=:appCode\n"+
             "    ORDER BY ce.system, ce.startTime\n" +
             "),\n" +
             "\n" +
@@ -48,6 +62,8 @@ public interface CpaEtaRepository extends JpaRepository<JobDelay, Long >{
             "        eta_end_time,\n" +
             "        raw_start_time,\n" +
             "        raw_end_time,\n" +
+            "        eta_config_id,\n" +
+            "        cpa_raw_id,\n" +
             "        eta_duration_seconds,\n" +
             "        raw_duration_seconds,\n" +
             "        \n" +
@@ -81,13 +97,10 @@ public interface CpaEtaRepository extends JpaRepository<JobDelay, Long >{
             "\n" +
             "SELECT \n" +
             "    -- Calculate delays for each job\n" +
-            "    `system`,\n" +
+            "    `system`,`jobname`, `eta_config_id`, `cpa_raw_id`,\n" +
             "    TIMEDIFF(actual_start_time, eta_start_time) AS start_delay,\n" +
             "    TIMEDIFF(actual_end_time, eta_end_time) AS end_delay\n" +
-            "FROM propagated_jobs where entity=:entity and system=:appCode\n" +
-            "ORDER BY `system`, eta_start_time DESC\n" +
-            "LIMIT 1;", nativeQuery = true)
-    List<JobDelay> getJobDelays(String businessDate, String entity, String appCode);
+            "FROM propagated_jobs ORDER BY `system`, eta_start_time DESC LIMIT 1;", nativeQuery = true)
+    List<CpaEta> getJobDelays(String businessDate, String entity, String appCode);
+
 }
-
-

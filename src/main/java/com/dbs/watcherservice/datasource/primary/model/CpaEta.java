@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.sql.Time;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
@@ -19,13 +20,21 @@ public class CpaEta {
     @Column(name="system")
     private String appCode;
 
-    private LocalTime startTime;
+    private Time start_delay;
 
-    private LocalTime endTime;
+    private Time end_delay;
 
     private String jobName;
 
     private String entity;
 
     private String businessDate;
+
+    @OneToOne
+    @JoinColumn(name="id", referencedColumnName = "cpa_raw_id")
+    private CpaRaw cpaRaw;
+
+    @OneToOne
+    @JoinColumn(name="id", referencedColumnName = "eta_config_id")
+    private CpaEtaConfig cpaEtaConfig;
 }
