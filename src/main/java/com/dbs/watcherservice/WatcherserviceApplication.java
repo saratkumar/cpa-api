@@ -2,10 +2,11 @@ package com.dbs.watcherservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
-//@ComponentScan({"org.springframework.mail.*"})
+@EnableFeignClients
 public class WatcherserviceApplication {
 
 	public static void main(String[] args) {

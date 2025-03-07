@@ -8,6 +8,7 @@ import com.dbs.watcherservice.dto.CpaGeneratorRequest;
 import com.dbs.watcherservice.dto.CpaJobStatusDto;
 import com.dbs.watcherservice.mapper.CpaJobStatusMapper;
 import com.dbs.watcherservice.datasource.primary.model.CpaJobStatus;
+import com.dbs.watcherservice.service.CpaRestServiceClient;
 import com.dbs.watcherservice.service.GeneratePathService;
 import com.dbs.watcherservice.utils.AppStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -39,9 +40,6 @@ public class GeneratePathServiceImpl implements GeneratePathService {
     @Value("${cpa.generator.wait.period}")
     private int cpaGeneratorWaitPeriod;
 
-    @Value("${cpa.api-url}")
-    private String apiUrl;
-
     @Autowired
     CpaRootNodeConfigRepository cpaRootNodeConfigRepository;
 
@@ -57,9 +55,8 @@ public class GeneratePathServiceImpl implements GeneratePathService {
 
     Logger logger = LoggerFactory.getLogger(GeneratePathServiceImpl.class);
 
-    OkHttpClient client = new OkHttpClient();
-
-    ObjectMapper objectMapper = new ObjectMapper();
+    @Autowired
+    private CpaRestServiceClient cpaRestServiceClient;
 
     @Override
     public void generateCritictialPath() {
@@ -82,23 +79,7 @@ public class GeneratePathServiceImpl implements GeneratePathService {
             cpaGeneratorRequest.setBusinessDate(appStore.getBusinessDate());
             cpaGeneratorRequest.setJobName(cpaRootNodeConfig.get().getLastJob());
             cpaGeneratorRequest.setEntity(appStore.getEntity());
-            String jsonRequest = objectMapper.writeValueAsString(cpaGeneratorRequest);
-            RequestBody body = RequestBody.create(jsonRequest, CpaConfigConstant.JSON);
-            Request postRequest = new Request.Builder()
-                    .url(apiUrl)
-                    .post(body)
-                    .header("Content-Type", "application/json")
-                    .build();
-             try(Response response = client.newCall(postRequest).execute()) {
-                if (response.isSuccessful()) {
-                    System.out.println("Response: " + response.body().string());
-                } else {
-                    System.out.println("Error: " + response.code());
-                }
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            List<CriticalPathAnalysisOutputData> listOfCpaOutput = cpaRestServiceClient.generateCriticalPath(cpaGeneratorRequest);
         }
 
         return null;
