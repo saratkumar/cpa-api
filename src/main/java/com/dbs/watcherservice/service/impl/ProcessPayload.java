@@ -8,6 +8,7 @@ import com.dbs.watcherservice.datasource.primary.repositories.CpaRootNodeConfigR
 import com.dbs.watcherservice.service.GeneratePathService;
 import com.dbs.watcherservice.utils.AppStore;
 import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,8 @@ public abstract class ProcessPayload {
 
     private String targetJobName = "";
 
+    // will be used to find the diff in duration
+    LocalDate localDate = LocalDate.now();
 
     List<CpaRootNodeConfig> cpaRootNodeConfigs = new ArrayList<>();
 
@@ -78,7 +81,7 @@ public abstract class ProcessPayload {
         return cpaRootNodeConfigs;
     }
 
-
+    @Transactional
     public void findETA(List<CpaRaw> cpaRaws, String system) {
         ExecutorService executor = Executors.newFixedThreadPool(1);
         executor.submit( () -> {
@@ -87,24 +90,25 @@ public abstract class ProcessPayload {
                  * Fetch records from cpa_eta_configs and cpa_raw tables and calculate the differences. to make it
                  * more relevant keeping it on cpaeta repo
                  */
-                List<CpaEta> cpaEtaConfigs = cpaEtaRepository.getJobDelays(appStore.getBusinessDate(), appStore.getEntity(), system);
+                List<CpaEta> cpaEtas = cpaEtaRepository.getJobDelays(appStore.getBusinessDate(), appStore.getEntity(), system);
                 List<CpaEta> exitingCpaEtaConfigs = cpaEtaRepository.findByBusinessDateAndEntityAndAppCode(appStore.getBusinessDate(), appStore.getEntity(), system);
-                Map<String, CpaEta> cpaEtaMap = exitingCpaEtaConfigs.stream().collect(Collectors.toMap(e -> e.getJobName(), Function.identity()));
+                Map<String, CpaEta> cpaEtaMap = exitingCpaEtaConfigs.stream().collect(Collectors.toMap(e -> e.getCpaEtaConfig().getJobName(), Function.identity()));
                 /**
                  * check job is already present in cpa_eta table if yes then update the time, and cpa raw value
                  */
-                cpaEtaConfigs.forEach(e -> {
-                    CpaEta previousVal = cpaEtaMap.get(e.getJobName());
+                cpaEtas.forEach(e -> {
+                    CpaEta previousVal = cpaEtaMap.get(e.getCpaEtaConfig().getJobName());
                     if(previousVal != null) {
                         e.setId(previousVal.getId());
                         e.setCpaRaw(previousVal.getCpaRaw());
                     } else {
                         e.setBusinessDate(appStore.getBusinessDate());
                     }
+                    e.setIsBreached(getBreachStatus(e));
                 });
 
                 /**Implementation*/
-                cpaEtaRepository.saveAll(cpaEtaConfigs);
+                cpaEtaRepository.saveAll(cpaEtas);
             } catch (Exception e) {
                 executor.shutdown();
                 System.out.println("Exception in finding ETA "+ e.getMessage());
@@ -112,6 +116,23 @@ public abstract class ProcessPayload {
 
         });
         executor.shutdown();
+    }
+
+    private Character getBreachStatus(CpaEta cpaEta) {
+        LocalDateTime etaStartTime = cpaEta.getCpaEtaConfig().getStartTime().toLocalTime().atDate(localDate);
+        LocalDateTime etaEndTime = cpaEta.getCpaEtaConfig().getEndTime().toLocalTime().atDate(localDate);
+
+        LocalDateTime cpaRawStartTime = cpaEta.getCpaRaw().getJobStartDateTime();
+        LocalDateTime cpaRawEndTime = cpaEta.getCpaRaw().getJobEndDateTime();
+
+        long etaDurationMinutes = Duration.between(etaStartTime, etaEndTime).toMinutes();
+
+        long rawDurationMinutes = Duration.between(cpaRawStartTime, cpaRawEndTime).toMinutes();
+        if(cpaEta.getCpaEtaConfig().getThreshold() != null) {
+            return  (rawDurationMinutes - etaDurationMinutes) > cpaEta.getCpaEtaConfig().getThreshold() ? 'Y' : 'N';
+        }
+
+        return 'N';
     }
 
 

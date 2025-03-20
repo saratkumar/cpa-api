@@ -20,12 +20,14 @@ public class CpaEtaConfig {
     @Column(name="system")
     private String appCode;
 
-    private LocalTime startDateTime;
+    private Time startTime;
 
-    private LocalTime endDateTime;
+    private Time endTime;
 
     private String jobName;
 
     private String entity;
+
+    private Long threshold;
 
 }

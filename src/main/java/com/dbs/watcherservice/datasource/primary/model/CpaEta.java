@@ -17,16 +17,9 @@ public class CpaEta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
-    @Column(name="system")
-    private String appCode;
-
     private Time start_delay;
 
     private Time end_delay;
-
-    private String jobName;
-
-    private String entity;
 
     private String businessDate;
 
@@ -37,4 +30,6 @@ public class CpaEta {
     @OneToOne
     @JoinColumn(name="id", referencedColumnName = "eta_config_id")
     private CpaEtaConfig cpaEtaConfig;
+
+    private Character isBreached;
 }
